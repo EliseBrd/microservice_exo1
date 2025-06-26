@@ -1,7 +1,10 @@
 package fr.formation.api;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import io.github.resilience4j.bulkhead.BulkheadFullException;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import org.springframework.beans.BeanUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -24,6 +27,7 @@ public class ProduitApiController {
     private final CommentaireFeignClient commentaireFeignClient;
 
     @GetMapping
+    @Bulkhead(name = "commentaire-service", fallbackMethod = "bulkheadFallback")
     public List<ProduitResponse> findAll() {
         return this.repository.findAll()
             .stream()
@@ -41,6 +45,12 @@ public class ProduitApiController {
             .toList()
         ;
     }
+    // fallback method
+    @ResponseStatus(HttpStatus.TOO_MANY_REQUESTS)
+    public List<ProduitResponse> bulkheadFallback(BulkheadFullException e) {
+        return new ArrayList<>();
+    }
+
 
     @GetMapping("/{id}")
     public ProduitByIdResponse findById(@PathVariable String id) {
